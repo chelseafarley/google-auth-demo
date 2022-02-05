@@ -1,29 +1,29 @@
+// expo install expo-web-browser expo-auth-session expo-random
 import { StatusBar } from 'expo-status-bar';
 import React from 'react';
-import { StyleSheet, Text, View, Image, Button } from 'react-native';
-import * as Google from 'expo-google-app-auth';
+import { StyleSheet, View, Text, Image, Button } from 'react-native';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function App() {
   const [accessToken, setAccessToken] = React.useState();
   const [userInfo, setUserInfo] = React.useState();
+  const [message, setMessage] = React.useState();
 
-  async function signInWithGoogleAsync() {
-    try {
-      const result = await Google.logInAsync({
-        androidClientId: "663215841316-dkvtp5q5u4oa1m6vkt3m4rkdcoegdg1u.apps.googleusercontent.com",
-        iosClientId: "663215841316-9pd6e3ne5bj7tgisd6o45h0dgoj903av.apps.googleusercontent.com",
-        scopes: ["profile", "email"]
-      });
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: "694235095257-fkbf1u81sm5ii76om74j5b7h8u4v2m7a.apps.googleusercontent.com",
+    iosClientId: "694235095257-qnub27n3o6s0e3lo1sneio03o6ka5k9m.apps.googleusercontent.com",
+    expoClientId: "694235095257-7t7h7mv877d2jfu7r508ct1egmesbqdm.apps.googleusercontent.com"
+  });
 
-      if (result.type === "success") {
-        setAccessToken(result.accessToken);
-      } else {
-        console.log("Permission denied");
-      }
-    } catch (e) {
-      console.log(e);
+  React.useEffect(() => {
+    setMessage(JSON.stringify(response));
+    if (response?.type === "success") {
+      setAccessToken(response.authentication.accessToken);
     }
-  }
+  }, [response]);
 
   async function getUserData() {
     let userInfoResponse = await fetch("https://www.googleapis.com/userinfo/v2/me", {
@@ -39,7 +39,7 @@ export default function App() {
     if (userInfo) {
       return (
         <View style={styles.userInfo}>
-          <Image source={{ uri: userInfo.picture }} style={styles.profilePic} />
+          <Image source={{uri: userInfo.picture}} style={styles.profilePic} />
           <Text>Welcome {userInfo.name}</Text>
           <Text>{userInfo.email}</Text>
         </View>
@@ -50,7 +50,10 @@ export default function App() {
   return (
     <View style={styles.container}>
       {showUserInfo()}
-      <Button title={accessToken ? "Get User Data" : "Login"} onPress={accessToken ? getUserData : signInWithGoogleAsync} />
+      <Button 
+        title={accessToken ? "Get User Data" : "Login"}
+        onPress={accessToken ? getUserData : () => { promptAsync({useProxy: false, showInRecents: true}) }}
+      />
       <StatusBar style="auto" />
     </View>
   );
